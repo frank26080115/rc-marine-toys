@@ -4,7 +4,7 @@ Currently I only own a few Taranis RC transmitters. They are all using the 2.4 G
 
 According to [this forum post on SubCommittee.com](https://subcommittee.com/forum/showthread.php?32640-433mhz-links-and-info-\(Tim-s-Regatta-Seminar&highlight=orangerx), a 433 MHz transmitter outputting only 6 mW can penetrate 1 meter of water. The [OrangeRX OpenLRS module](https://hobbyking.com/en_us/orangerx-open-lrs-433mhz-transmitter-1w-jr-turnigy-compatible.html) can be purchased and used with my Taranis transmitters.
 
-For the receiver, it's better for me to simply buy a HopeRF RFM22B, and attach my own microcontroller to it.
+For the receiver, it's better for me to simply buy a HopeRF RFM22B, and attach my own microcontroller to it. The antenna length for the 433 MHz wavelength is 173mm (or 307mm long for 244 MHz).
 
 ## Microcontroller
 
