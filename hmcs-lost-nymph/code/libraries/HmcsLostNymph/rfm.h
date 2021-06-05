@@ -1,6 +1,7 @@
 #ifndef _RFM_H_
 #define _RFM_H_
 
+#include <stdint.h>
 #include "rfm_defs.h"
 
 #ifdef __cplusplus
@@ -18,6 +19,7 @@ uint8_t rfmGetGPIO1(void);
 uint8_t rfmGetRSSI(void);
 uint8_t rfmGetPacketLength(void);
 void rfmGetPacket(uint8_t *buf, uint8_t size);
+int8_t rfmGetWholePacket(uint8_t *buf, uint8_t maxsize);
 
 void rfmSetTX(void);
 void rfmSetRX(void);

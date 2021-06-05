@@ -1,6 +1,9 @@
 #ifndef _HMCSLOSTNYMPH_H_
 #define _HMCSLOSTNYMPH_H_
 
+#include <Arduino.h>
+#include <stdint.h>
+
 #include "hln_config.h"
 #include "rfm.h"
 #include "multiprotocol_defs.h"
@@ -11,41 +14,61 @@ extern "C" {
 
 typedef struct
 {
-    uint32_t tx_uid;
-    uint32_t rx_uid;
+    uid_t tx_uid;
+    uid_t rx_uid;
 }
 nvm_t;
 
 enum
 {
-    PKTTYPE_BIND_TX,
-    PKTTYPE_BIND_RX,
+    PKTTYPE_BIND,
     PKTTYPE_REMOTECONTROL,
     PKTTYPE_TELEMETRY,
-    PKTTYPE_TX_AUX,
-    PKTTYPE_RX_AUX,
 };
 
 enum
 {
-    RUNMODE_IDLE,
-    RUNMODE_BINDING,
-    RUNMODE_RUNNING,
-    RUNMODE_ERROR,
-}
+    RADIOSM_IDLE,
+    RADIOSM_RX_START,
+    RADIOSM_RX_WAIT,
+    RADIOSM_RX_HOP,
+    RADIOSM_TX_START,
+    RADIOSM_TX_WAIT,
+    RADIOSM_BIND_START,
+    RADIOSM_BIND_TX,
+    RADIOSM_BIND_WAIT,
+    RADIOSM_BIND_WAIT,
+};
 
 typedef struct
 {
-    uint32_t magic_key;
-    uint32_t tx_uid;
-    uint32_t rx_uid;
-    uint32_t hdr_chk;
+    #ifdef EXPLICIT_MAGIC
+    uid_t magic_key;
+    #endif
+    uid_t tx_uid;
+    uid_t rx_uid;
+    uid_t hdr_chk;
     uint8_t  pkt_type;
 }
 pkthdr_t;
 
+typedef struct
+{
+    uint8_t a1;
+    uint8_t a2;
+    uint8_t rssi;
+    #ifdef EXTENDED_TELEMETRY
+    uint16_t afcc;
+    uint8_t good_pkts;
+    #endif
+}
+telem_pkt_t;
+
 extern uint16_t channel[MULTIPROTOCOL_TOTAL_CHANNELS];
-extern uint8_t rfm_buffer[64];
+extern uint8_t  rfm_buffer[RFM_PKT_LEN];
+#ifdef HLN_SEND_COMPRESSED
+extern uint8_t  sbus_buffer[RFM_PKT_LEN];
+#endif
 extern nvm_t nvm;
 extern rfm22_modem_regs_t modem_params[RFM_AVAILABLE_PARAMS];
 

@@ -1,3 +1,8 @@
+#define TELEMODE_MULPRO 0
+#define TELEMODE_SPORT  1
+#define TELEMODE_FRSKYD 2
+#define TELEMETRY_MODE  TELEMODE_SPORT
+
 uint8_t telem_schedule = 0;
 uint32_t telem_sendTime = 0;
 uint32_t telem_rxTime = 0;
@@ -12,6 +17,7 @@ uint8_t telem_profile = 0;
 
 #define TELEM_INTERVAL_MS 12
 #define TELEM_BAUD        100000
+// I think because of the circuitry and capabilities of the OrangeTx LRS module, TELEMODE_SPORT is the only mode possible
 
 void smartport_send(uint8_t* data)
 {
@@ -92,6 +98,7 @@ void report_telemetry(uint8_t a1, uint8_t a2, uint8_t rssi_rx, uint8_t rssi_tx, 
 
 void telemetry_task()
 {
+#ifdef TELEMETRY_MODE
     uint32_t now = millis();
     if ((now - telem_rxTime) >= TELEM_LOST_MS)
     {
@@ -150,5 +157,6 @@ void telemetry_task()
     }
     telem_schedule = (telem_schedule + 1) % 6;
 #else
+#endif
 #endif
 }

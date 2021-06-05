@@ -1,26 +1,36 @@
+uint16_t local_afcc;//
+
 void radio_task()
 {
     static uint32_t last_tx_time = 0;
 
     uint32_t now = millis();
 
-    switch (run_mode)
+    switch (radio_statemach)
     {
-        case RUNMODE_RX_WAIT:
+        case RADIOSM_IDLE:
+            radio_statemach = need_bind == false ? RADIOSM_TX_START : RADIOSM_BIND_START;
+            break;
+        case RADIOSM_RX_WAIT:
             if ((now - last_tx_time) < PKT_INTVAL_MS)
             {
-                if (rx has data)
+                if (RFM_IRQ_ASSERTED() != false)
                 {
+                    int8_t rx_len;
                     tx_rssi = rfmGetRSSI();
-                    rfmGetPacket(rfm_buffer, TELEMETRY_PACKETSIZE);
-                    run_mode = RUNMODE_RX_START;
+                    //local_afcc = rfmGetAFCC();
+                    rx_len = rfmGetWholePacket(rfm_buffer, RFM_PKT_LEN);
+                    radio_statemach = RADIOSM_RX_START;
                     pkthdr_t* p = (pkthdr_t*)rfm_buffer;
                     if (need_bind != false && check_packet(rfm_buffer, bind_uid, 0) != false && p->pkt_type == PKTTYPE_BIND)
                     {
+                        #ifdef PIN_BUZZER
+                        buzz(1000);
+                        #endif
                         nvm.tx_uid = bind_uid;
                         nvm.rx_uid = p->rx_uid;
-                        nvm_save();
-                        run_mode = RUNMODE_BIND_FINISHED;
+                        nvm_save(mp_rxnum);
+                        radio_statemach = RADIOSM_BIND_WAIT;
                     }
                     else if (check_packet(rfm_buffer, nvm.tx_uid, nvm.rx_uid) != false)
                     {
@@ -33,14 +43,25 @@ void radio_task()
                 }
                 break;
             }
-            run_mode = need_bind == false ? RUNMODE_TX_START : RUNMODE_BIND_START;
-        case RUNMODE_TX_START:
+            // timeout
+            radio_statemach = need_bind == false ? RADIOSM_TX_START : RADIOSM_BIND_START;
+            // fall through
+        case RADIOSM_TX_START:
             last_tx_time = now;
             rfmSetChannel(get_hop_chan(hop_idx));
-            build_packet(nvm.rx_uid, nvm.tx_uid, rfm_buffer, PKTTYPE_REMOTECONTROL);
+            build_packet(nvm.tx_uid, nvm.rx_uid, rfm_buffer, PKTTYPE_REMOTECONTROL);
             uint8_t data_idx = sizeof(pkthdr_t);
-            uint8_t i;
-            for (i = 0; i < RC_USED_CHANNELS; i++)
+
+            #ifdef HLN_SEND_COMPRESSED
+            uint32_t bytes2send = (((RC_USED_CHANNELS + 1) * 11) / 8);
+            bytes2send = (bytes2send > SBUS_BYTECNT) ? SBUS_BYTECNT : bytes2send;
+            for (uint8_t i = 0; i < bytes2send; i++)
+            {
+                rfm_buffer[data_idx] = ((uint8_t*)sbus_buff)[i];
+                data_idx++;
+            }
+            #else
+            for (uint8_t i = 0; i < RC_USED_CHANNELS; i++)
             {
                 uint8_t* ptr = (uint8_t*)&(channel[i]);
                 rfm_buffer[data_idx] = ptr[0];
@@ -48,69 +69,91 @@ void radio_task()
                 rfm_buffer[data_idx] = ptr[1];
                 data_idx++;
             }
+            #endif
+
             rfmSendPacket(rfm_buffer, data_idx);
             rfmClearIntStatus();
             rfmSetTX();
-            run_mode = RUNMODE_TX_WAIT;
-            hop_idx = (hop_idx + 1) % 8;
+            radio_statemach = RADIOSM_TX_WAIT;
+            hop_idx = (hop_idx + 1) % (sizeof(uid_t) * 2);
             break;
-        case RUNMODE_BIND_START:
+        case RADIOSM_BIND_START:
             last_tx_time = now;
             hop_idx = 0;
             rfmSetChannel(RFM_BIND_CHANNEL);
-            build_packet(0, bind_uid, rfm_buffer, PKTTYPE_BIND);
+            build_packet(bind_uid, 0, rfm_buffer, PKTTYPE_BIND);
             uint8_t data_idx = sizeof(pkthdr_t);
             rfmSendPacket(rfm_buffer, data_idx);
             rfmClearIntStatus();
             rfmSetTX();
-            run_mode = RUNMODE_TX_WAIT;
+            radio_statemach = RADIOSM_TX_WAIT;
             break;
-        case RUNMODE_TX_WAIT:
-            if (interrupt didn't happen)
+        case RADIOSM_TX_WAIT:
+            if (RFM_IRQ_ASSERTED() == false)
             {
+                // no interrupt pin assertion
                 if ((now - last_tx_time) >= PKT_INTVAL_MS)
                 {
                     // timeout waiting for TX
-                    run_mode = RUNMODE_TX_START;
-                    break;
+                    radio_statemach = RADIOSM_TX_START;
                 }
+                break;
             }
-            rfmClearIntStatus();
-            run_mode = RUNMODE_RX_START;
-        case RUNMODE_RX_START:
+            else
+            {
+                // yes interrupt pin assertion
+                rfmClearIntStatus();
+                radio_statemach = RADIOSM_RX_START;
+                // fall through
+            }
+        case RADIOSM_RX_START:
             rfmClearFIFO(0);
             rfmClearIntStatus();
             rfmSetRX();
-            run_mode = RUNMODE_RX_WAIT;
+            radio_statemach = RADIOSM_RX_WAIT;
             break;
-        case RUNMODE_BIND_FINISHED:
+        case RADIOSM_BIND_WAIT:
             if (need_bind == false)
             {
-                run_mode = RUNMODE_RX_WAIT;
+                radio_statemach = RADIOSM_RX_WAIT;
             }
             break;
     }
 }
 
-void taranis_task()
+#define MP_BUFFER_SIZE 32
+uint8_t mp_buffer[MP_BUFFER_SIZE];
+multiprot_pkt_t* mp_pkt;
+
+bool taranis_task()
 {
     static uint8_t pkt_idx = 0;
-    static uint8_t mp_buffer[32];
-    static multiprot_pkt_t* mp_pkt = (multiprot_pkt_t*)mp_buffer;
+    static uint8_t prev_rxnum = 0;
     static uint32_t last_mp_time = 0;
+
+    bool ret = false;
 
     uint32_t now = millis();
 
     if (last_mp_time == 0 || (now - last_mp_time) > TARANIS_TIMEOUT)
     {
+        mp_pkt = (multiprot_pkt_t*)mp_buffer;
         mp_ready = false;
         center_all_channels();
-        last_mp_time = now;
     }
 
-    if (Serial.available() > 0)
+    #if TARANIS_CONSOLE_TIMEOUT > 0
+    if ((now - last_mp_time) > TARANIS_CONSOLE_TIMEOUT)
     {
-        while (Serial.available() > 0)
+        Serial.begin(57600, SERIAL_8N2);
+        cli_task();
+        return;
+    }
+    #endif
+
+    //if (Serial.available() > 0)
+    {
+        while (Serial.available() > 0 && (millis() - now) <= 2)
         {
             uint8_t c = Serial.read();
             mp_buffer[pkt_idx] = c;
@@ -119,41 +162,77 @@ void taranis_task()
                 if (mp_pkt->header == MULTIPROTOCOL_HEADER)
                 {
                     pkt_idx++;
+                    #ifdef DEBUG_MULTIPROTOCOL_ECHO
+                    Serial.write(c);
+                    #endif
                 }
             }
             else if (pkt_idx == 1)
             {
                 if ((mp_pkt->subprotocol & 0x1F) == MULTIPROTOCOL_PROTOCOL_OPENLRS)
                 {
+                    if ((mp_pkt->subprotocol & 0x80) != 0)
+                    {
+                        need_bind = true;
+                        bind_start_time = now;
+                    }
                     pkt_idx++;
+                    #ifdef DEBUG_MULTIPROTOCOL_ECHO
+                    Serial.write(c);
+                    #endif
+                }
+                else if (c == MULTIPROTOCOL_HEADER)
+                {
+                    // another header, hmm... pretend we just sync'ed on header
+                    pkt_idx = 1;
                 }
                 else
                 {
-                    pkt_idx = 0;
+                    pkt_idx = 0; // error, sync on header again
                 }
-                need_bind = ((mp_pkt->subprotocol & 0x80) != 0);
             }
             else if (pkt_idx <= 3)
             {
                 pkt_idx++; // don't care about these bytes
+                #ifdef DEBUG_MULTIPROTOCOL_ECHO
+                Serial.write(c);
+                #endif
             }
             else if (pkt_idx <= 25)
             {
                 if (pkt_idx == 25) // we have all of the pulse data
                 {
+                    ret = true;
+                    #ifdef HLN_SEND_COMPRESSED
+                    memcpy((uint8_t*)sbus_buff, (uint8_t*)&(mp_buffer[4]), SBUS_BYTECNT);
+                    #endif
                     decode_sbus((uint8_t*)&(mp_buffer[4]), (uint16_t*)channel);
                     last_mp_time = now;
                     mp_ready = true;
+                    mp_rxnum = mp_pkt->rxnum_power_type & 0x0F;
+                    if (prev_rxnum != mp_rxnum)
+                    {
+                        nvm_load(mp_rxnum);
+                        prev_rxnum = mp_rxnum;
+                    }
                     pkt_idx = 0; // ignore rest of packet
+                    // obtaining a false header byte in the next byte will not cause a malfunction
+                    // bytes 27 to 35 will never come if the Taranis is configured correctly
                 }
                 else
                 {
                     pkt_idx++;
+                    #ifdef DEBUG_MULTIPROTOCOL_ECHO
+                    Serial.write(c);
+                    #endif
                 }
             }
         }
     }
+    return ret;
 }
+
+uint32_t bind_start_time = 0;
 
 void bind_task()
 {
@@ -162,18 +241,19 @@ void bind_task()
     static uint32_t btn_time = 0;
     uint32_t now = millis();
 
-    if (digitalRead(PIN_BUTTON) == LOW)
+    if (BIND_BUTTON_PRESSED() != false)
     {
         if (prev_btn == false)
         {
-            srand(micros() ^ millis());
             btn_time = now;
         }
         else
         {
             if ((now - btn_time) > BIND_BUTTON_HOLD_TIME)
             {
+                prev_need_bind = false; // this tricks the next bit of code to regenerate the random UID
                 need_bind = true;
+                bind_start_time = now;
             }
         }
         prev_btn = true;
@@ -181,16 +261,19 @@ void bind_task()
     else
     {
         prev_btn = false;
+        if (bind_start_time != 0)
+        {
+            if ((now - bind_start_time) > 500)
+            {
+                need_bind = false;
+                bind_start_time = 0;
+            }
+        }
     }
 
     if (prev_need_bind == false && need_bind != false)
     {
-        srand(micros() ^ millis());
-        do
-        {
-            bind_uid = rand();
-        }
-        while (bind_uid == 0);
+        bind_uid = gen_rand_uid();
     }
     prev_need_bind = need_bind;
 
@@ -198,10 +281,11 @@ void bind_task()
     {
         LED_RED_OFF();
         LED_GRN_OFF();
+        bind_start_time = 0;
     }
     else if (need_bind != false)
     {
-        if (run_mode == RUNMODE_BIND_FINISHED)
+        if (radio_statemach == RADIOSM_BIND_FINISHED)
         {
             LED_RED_OFF();
             if (((now / 100) % 2) == 0)
@@ -226,30 +310,5 @@ void bind_task()
                 LED_RED_ON();
             }
         }
-    }
-}
-
-uint16_t multiproto_2_pulseUs(uint16_t x)
-{
-    int32_t value = x;
-    // from https://github.com/pascallanger/DIY-Multiprotocol-TX-Module/blob/master/Multiprotocol/Multiprotocol.h
-    value = (((value - 204) * 1000) / 1639) + 1000;
-    return value
-}
-
-void decode_sbus(uint8_t* packet, uint16_t* channels)
-{
-    ppm_msg_t* ptr = (ppm_msg_t*)(pkt);
-    uint8_t set;
-    for (set = 0; set < 2; set++)
-    {
-        channel[(set << 3) + 0] = multiproto_2_pulseUs(ptr->sbus.ch[set].ch0);
-        channel[(set << 3) + 1] = multiproto_2_pulseUs(ptr->sbus.ch[set].ch1);
-        channel[(set << 3) + 2] = multiproto_2_pulseUs(ptr->sbus.ch[set].ch2);
-        channel[(set << 3) + 3] = multiproto_2_pulseUs(ptr->sbus.ch[set].ch3);
-        channel[(set << 3) + 4] = multiproto_2_pulseUs(ptr->sbus.ch[set].ch4);
-        channel[(set << 3) + 5] = multiproto_2_pulseUs(ptr->sbus.ch[set].ch5);
-        channel[(set << 3) + 6] = multiproto_2_pulseUs(ptr->sbus.ch[set].ch6);
-        channel[(set << 3) + 7] = multiproto_2_pulseUs(ptr->sbus.ch[set].ch7);
     }
 }

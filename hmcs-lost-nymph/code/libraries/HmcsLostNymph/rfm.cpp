@@ -1,4 +1,6 @@
 #include "rfm.h"
+#include <Arduino.h>
+#include "bbspi.h"
 
 void rfmInit(uint8_t diversity)
 {
@@ -94,6 +96,22 @@ void rfmGetPacket(uint8_t *buf, uint8_t size)
   for (uint8_t i = 0; i < size; i++) {
     buf[i] = spiReadData();
   }
+  nSEL_HI();
+}
+
+int8_t rfmGetWholePacket(uint8_t *buf, uint8_t maxsize)
+{
+  int8_t gotlen = rfmGetPacketLength();
+  // Send the package read command
+  spiSendAddress(RFM22B_FIFO);
+  for (uint8_t i = 0; i < maxsize || i < gotlen; i++) {
+    uint8_t x = spiReadData();
+    if (i < maxsize) {
+        buf[i] = x;
+    }
+  }
+  nSEL_HI();
+  return gotlen;
 }
 
 void rfmSetTX(void)
@@ -140,7 +158,7 @@ void rfmSetDirectOut(uint8_t enable)
     r2 = spiReadRegister(RFM22B_MODCTL2);
     r3 = spiReadRegister(RFM22B_FREQDEV);
     // setup for direct output, i.e. beacon tones
-    spiWriteRegister(RFM22B_DACTL, 0x00);    //disable packet handling
+    spiWriteRegister(RFM22B_DACTL,   0x00);    //disable packet handling
     spiWriteRegister(RFM22B_MODCTL2, 0x12);    // trclk=[00] no clock, dtmod=[01] direct using SPI, fd8=0 eninv=0 modtyp=[10] FSK
     spiWriteRegister(RFM22B_FREQDEV, 0x02);    // fd (frequency deviation) 2*625Hz == 1.25kHz
   } else {
@@ -157,23 +175,23 @@ void rfmSetHeader(uint8_t iHdr, uint8_t bHdr)
   spiWriteRegister(RFM22B_CHKHDR3+iHdr, bHdr);
 }
 
-void rfmSetModemRegs(struct rfm22_modem_regs* r)
+void rfmSetModemRegs(rfm22_modem_regs_t* r)
 {
-  spiWriteRegister(RFM22B_IFBW,        r->r_1c);
-  spiWriteRegister(RFM22B_AFCLPGR,   r->r_1d);
-  spiWriteRegister(RFM22B_AFCTIMG,   r->r_1e);
-  spiWriteRegister(RFM22B_RXOSR,      r->r_20);
-  spiWriteRegister(RFM22B_NCOFF2,     r->r_21);
-  spiWriteRegister(RFM22B_NCOFF1,     r->r_22);
-  spiWriteRegister(RFM22B_NCOFF0,     r->r_23);
+  spiWriteRegister(RFM22B_IFBW,      r->r_1C);
+  spiWriteRegister(RFM22B_AFCLPGR,   r->r_1D);
+  spiWriteRegister(RFM22B_AFCTIMG,   r->r_1E);
+  spiWriteRegister(RFM22B_RXOSR,     r->r_20);
+  spiWriteRegister(RFM22B_NCOFF2,    r->r_21);
+  spiWriteRegister(RFM22B_NCOFF1,    r->r_22);
+  spiWriteRegister(RFM22B_NCOFF0,    r->r_23);
   spiWriteRegister(RFM22B_CRGAIN1,   r->r_24);
   spiWriteRegister(RFM22B_CRGAIN0,   r->r_25);
-  spiWriteRegister(RFM22B_AFCLIM,     r->r_2a);
-  spiWriteRegister(RFM22B_TXDR1,      r->r_6e);
-  spiWriteRegister(RFM22B_TXDR0,      r->r_6f);
-  spiWriteRegister(RFM22B_MODCTL1,  r->r_70);
-  spiWriteRegister(RFM22B_MODCTL2,  r->r_71);
-  spiWriteRegister(RFM22B_FREQDEV,  r->r_72);
+  spiWriteRegister(RFM22B_AFCLIM,    r->r_2A);
+  spiWriteRegister(RFM22B_TXDR1,     r->r_6E);
+  spiWriteRegister(RFM22B_TXDR0,     r->r_6F);
+  spiWriteRegister(RFM22B_MODCTL1,   r->r_70);
+  spiWriteRegister(RFM22B_MODCTL2,   r->r_71);
+  spiWriteRegister(RFM22B_FREQDEV,   r->r_72);
 }
 
 void rfmSetPower(uint8_t power)

@@ -1,6 +1,8 @@
 #ifndef _RFM_DEFS_H_
 #define _RFM_DEFS_H_
 
+#define RFM_PKT_LEN         64
+
 #define RFM22B_INTSTAT1     0x03
 #define RFM22B_INTSTAT2     0x04
 #define RFM22B_INTEN1       0x05
@@ -86,7 +88,7 @@
 
 typedef struct rfm22_modem_regs {
   uint32_t bps;
-  uint8_t  r_1c, r_1d, r_1e, r_20, r_21, r_22, r_23, r_24, r_25, r_2a, r_6e, r_6f, r_70, r_71, r_72;
+  uint8_t  r_1C, r_1D, r_1E, r_20, r_21, r_22, r_23, r_24, r_25, r_2A, r_6E, r_6F, r_70, r_71, r_72;
 }
 rfm22_modem_regs_t;
 

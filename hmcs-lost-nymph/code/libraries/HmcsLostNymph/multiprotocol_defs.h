@@ -1,6 +1,13 @@
 #ifndef _MULPROT_DEFS_H_
 #define _MULPROT_DEFS_H_
 
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #define MULTIPROTOCOL_HEADER 0x55
 #define MULTIPROTOCOL_PROTOCOL_OPENLRS 0x1B
 #define MULTIPROTOCOL_TOTAL_CHANNELS 16
@@ -41,5 +48,9 @@ union ppm_msg {
   uint16_t words[16];
   struct sbus sbus;
 } ppm_msg_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

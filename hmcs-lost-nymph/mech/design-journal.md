@@ -15,11 +15,11 @@ There is two threaded rods running along the inside of the WTC tube. Internal co
 
 The drive motors should be 280 sized DC brushed motors, but the design can be easily adjusted to use 130 sized motors as well.
 
-The diving action is done with a ballast system consisting of a bladder made of a balloon, and a peristaltic pump. The peristaltic pump allows the system to pump bidirectionally without the usage of any valves. The downside is that there's no safety, no redundancy, and the entire WTC must be airtight. The usage of a balloon bladder, instead of a water chamber, is to make it easy to shift the position of the ballast, and it requires no additional sealing against the WTC walls. As I am not very experienced, I am avoiding the use of valves, compressed air, and pistons.
-
 The outer hull of the submarine is 3D printed in 6 sections that magnetically attach to each other. The bow and stern are also 3D printed, and are attached to the WTC using screws. The hull pieces do not need to be waterproof.
 
 ## Diving
+
+The diving action is done with a ballast system consisting of a bladder made of a balloon, and a peristaltic pump. The peristaltic pump allows the system to pump bidirectionally without the usage of any valves (even if it leaks, it will leak water outwards, which is still safe). The downside is that there's no safety, no redundancy, and the entire WTC must be airtight. The usage of a balloon bladder, instead of a water chamber, is to make it easy to shift the position of the ballast, and it requires no additional sealing against the WTC walls. As I am not very experienced, I am avoiding the use of valves, compressed air, and pistons.
 
 If the bladder takes up 33% of the WTC's volume, then the air pressure will rise by 0.5 atm, roughly 7.3 PSI. The front and rear end-caps have a surface area of 5 sq-in. This means each end-cap will be under 37 lbs of force. Each end-cap will be secured to the WTC with three M3 screws radially. It is highly unlikely that the bladder will be filled to that extent.
 

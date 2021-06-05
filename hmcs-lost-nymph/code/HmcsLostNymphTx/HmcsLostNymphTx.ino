@@ -1,20 +1,26 @@
 #include <HmcsLostNymph.h>
 
-#define LED_RED_OUT()  DDRB  |=  _BV(5);
-#define LED_RED_ON()   PORTB |=  _BV(5);
-#define LED_RED_OFF()  PORTB &= ~_BV(5);
-#define LED_GRN_OUT()  DDRB  |=  _BV(4);
-#define LED_GRN_ON()   PORTB |=  _BV(4);
-#define LED_GRN_OFF()  PORTB &= ~_BV(4);
+#define LED_RED_OUT()  DDRB  |=  _BV(5)
+#define LED_RED_ON()   PORTB |=  _BV(5)
+#define LED_RED_OFF()  PORTB &= ~_BV(5)
+#define LED_GRN_OUT()  DDRB  |=  _BV(4)
+#define LED_GRN_ON()   PORTB |=  _BV(4)
+#define LED_GRN_OFF()  PORTB &= ~_BV(4)
 
 #define RFM_IRQ_PIN_SETUP() do { DDRD &= ~_BV(2); DDRD |= _BV(2); } while (0)
-#define RFM_IRQ_ASSERTED()  ((PIND & 0x04)==0x00)
+#define RFM_IRQ_ASSERTED()  ((PIND & _BV(2))==0x00)
 
-uint8_t run_mode = RUNMODE_TX_START;
+#define BIND_BTN_SETUP()   do { DDRB &= ~_BV(3); PORTB |= _BV(3); } while (0)
+#define BIND_BTN_PRESSED() ((PINB & _BV(3)) == 0)
+
+#define PIN_BUZZER 10
+
+uint8_t radio_statemach = RADIOSM_IDLE;
 
 uint8_t hop_idx = 0;
 bool need_bind = false;
 uint32_t bind_uid = 0;
+uint8_t mp_rxnum = 0;
 
 bool mp_ready = false;
 bool telem_good = false;
@@ -26,32 +32,15 @@ void setup()
     LED_RED_OFF();
     LED_GRN_OUT();
     LED_GRN_OFF();
-    RFM_IRQ_PIN_SETUP();
     nvm_read();
 
+    RFM_IRQ_PIN_SETUP();
     radio_init();
-}
+    BIND_BTN_SETUP();
 
-void radio_init()
-{
-    // TODO: init SPI here
-
-    rfmSetReadyMode(); // turn on XTAL
-    delayMicroseconds(600); // time to settle
-    rfmClearIntStatus();
-    rfmInit(0);
-    rfmSetStepSize(RFM_FREQHOP_STEPSIZE);
-
-    uint32_t magic = MAGIC_KEY;
-    for (uint8_t i = 0; i < 4; i++)
-    {
-        rfmSetHeader(i, (magic >> 24) & 0xFF);
-        magic = magic << 8; // advance to next byte
+    while (millis() == 0) {
+        // do nothing
     }
-
-    rfmSetModemRegs(&modem_params[RFM_DEFAULT_PARAM_IDX]);
-    rfmSetPower(RFM_TX_POWER);
-    rfmSetCarrierFrequency(RFM_NOMINAL_FREQ);
 }
 
 void loop()
@@ -61,6 +50,9 @@ void loop()
     telemetry_task();
     taranis_task();
     bind_task();
+    #ifdef PIN_BUZZER
+    buzz_task();
+    #endif
 }
 
 void heartbeat_task()
@@ -101,3 +93,36 @@ void heartbeat_task()
         LED_GRN_OFF();
     }
 }
+
+#ifdef PIN_BUZZER
+
+uint32_t buzz_start = 0;
+uint32_t buzz_dur = 0;
+
+void buzz_task()
+{
+    if (buzz_start != 0)
+    {
+        uint32_t now = millis();
+        if ((now - buzz_start) >= buzz_dur)
+        {
+            #ifdef PIN_BUZZER
+            digitalWrite(PIN_BUZZER, LOW);
+            #endif
+            buzz_start = 0;
+            buzz_dur = 0;
+        }
+    }
+}
+
+void buzz(uint32_t dur)
+{
+    buzz_start = millis();
+    buzz_dur = dur;
+    #ifdef PIN_BUZZER
+    pinMode(PIN_BUZZER, OUTPUT);
+    digitalWrite(PIN_BUZZER, HIGH);
+    #endif
+}
+
+#endif
