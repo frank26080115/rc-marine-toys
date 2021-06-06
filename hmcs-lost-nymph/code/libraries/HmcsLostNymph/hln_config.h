@@ -5,7 +5,8 @@
 
 #define MAGIC_KEY   0xDEADBEAF
 #define PRIVATE_KEY 0x2EF85CA8
-#define uid_t       uint32_t
+
+#define HLN_SEND_COMPRESSED
 
 //#define RFM_NOMINAL_FREQ     435000000
 #define RFM_NOMINAL_FREQ     240000000
@@ -25,5 +26,11 @@
 
 #define RC_USED_CHANNELS     8
 #define RC_DEADZONE_US       8
+
+#ifdef HLN_SEND_COMPRESSED
+#define uid_t       uint16_t
+#else
+#define uid_t       uint32_t
+#endif
 
 #endif

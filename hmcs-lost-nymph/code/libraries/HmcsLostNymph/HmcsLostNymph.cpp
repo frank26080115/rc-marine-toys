@@ -8,6 +8,7 @@ uint8_t  rfm_buffer[RFM_PKT_LEN];
 #ifdef HLN_SEND_COMPRESSED
 uint8_t  sbus_buffer[RFM_PKT_LEN];
 #endif
+nvm_t nvm;
 
 uint8_t get_hop_chan(uint8_t idx)
 {
@@ -100,7 +101,7 @@ void nvm_save(uint8_t idx)
 {
     uint8_t* ptr = (uint8_t*)&nvm;
     uint32_t addr = idx * sizeof(nvm_t);
-    for (int i = 0; i < sizeof(nvm_t); i++, addr++)
+    for (uint8_t i = 0; i < sizeof(nvm_t); i++, addr++)
     {
         ptr[i] = EEPROM.read(addr);
     }
@@ -110,7 +111,7 @@ void nvm_load(uint8_t idx)
 {
     uint8_t* ptr = (uint8_t*)&nvm;
     uint32_t addr = idx * sizeof(nvm_t);
-    for (int i = 0; i < sizeof(nvm_t); i++, addr++)
+    for (uint8_t i = 0; i < sizeof(nvm_t); i++, addr++)
     {
         EEPROM.write(addr, ptr[i]);
     }
@@ -142,12 +143,12 @@ uint16_t multiproto_2_pulseUs(uint16_t x)
     int32_t value = x;
     // from https://github.com/pascallanger/DIY-Multiprotocol-TX-Module/blob/master/Multiprotocol/Multiprotocol.h
     value = (((value - 204) * 1000) / 1639) + 1000;
-    return value
+    return value;
 }
 
 void decode_sbus(uint8_t* packet, uint16_t* channels)
 {
-    ppm_msg_t* ptr = (ppm_msg_t*)(pkt);
+    ppm_msg_t* ptr = (ppm_msg_t*)(packet);
     uint8_t set;
     for (set = 0; set < 2; set++)
     {

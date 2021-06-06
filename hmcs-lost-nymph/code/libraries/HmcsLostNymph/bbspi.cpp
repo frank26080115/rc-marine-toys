@@ -8,12 +8,12 @@ uint8_t spiReadBit(void)
 {
   uint8_t r = 0;
   SCK_HI();
-  NOP();
-  if (SDO_1) {
+  _NOP();
+  if (SDO_1()) {
     r = 1;
   }
   SCK_LO();
-  NOP();
+  _NOP();
   return r;
 }
 
@@ -31,18 +31,18 @@ void spiWriteBit(uint8_t b)
 {
   if (b) {
     SCK_LO();
-    NOP();
+    _NOP();
     SDI_HI();
-    NOP();
+    _NOP();
     SCK_HI();
-    NOP();
+    _NOP();
   } else {
     SCK_LO();
-    NOP();
+    _NOP();
     SDI_LO();
-    NOP();
+    _NOP();
     SCK_HI();
-    NOP();
+    _NOP();
   }
 }
 
@@ -85,7 +85,7 @@ void spi_hwInit()
     nSEL_OUT();
     nSEL_HI();
     SPI.begin();
-    SPI.beginTransaction(SPISettings(8000000, MSBFIRST, SPI_MODE0))
+    SPI.beginTransaction(SPISettings(8000000, MSBFIRST, SPI_MODE0));
 }
 
 void spiWriteData(uint8_t i)

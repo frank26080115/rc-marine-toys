@@ -1,7 +1,7 @@
 #ifndef _mI2C_H_
 #define _mI2C_H_
 
-#if (BOARD_TYPE != 0)
+#if (BOARD_TYPE != 10)
 
 #include <util/twi.h>
 #include <Arduino.h>
@@ -329,6 +329,6 @@ uint8_t myI2C_readFrom(uint8_t address, uint8_t* data, uint8_t length, uint8_t f
   return 0;
 }
 
-#endlf
+#endif
 
 #endif

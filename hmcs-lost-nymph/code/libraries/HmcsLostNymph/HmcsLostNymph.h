@@ -37,7 +37,6 @@ enum
     RADIOSM_BIND_START,
     RADIOSM_BIND_TX,
     RADIOSM_BIND_WAIT,
-    RADIOSM_BIND_WAIT,
 };
 
 typedef struct
@@ -73,8 +72,18 @@ extern nvm_t nvm;
 extern rfm22_modem_regs_t modem_params[RFM_AVAILABLE_PARAMS];
 
 uint8_t get_hop_chan(uint8_t idx);
+uid_t calc_hdrchk(uid_t tx_uid, uid_t rx_uid);
+void build_packet(uid_t tx_uid, uid_t rx_uid, uint8_t* buffer, uint8_t pkt_type);
+bool check_packet(uint8_t* buffer, uid_t tx_uid, uid_t rx_uid);
+void center_all_channels();
+bool channels_has_movement();
+uid_t gen_rand_uid();
+void nvm_save(uint8_t idx);
+void nvm_load(uint8_t idx);
+void radio_init();
+uint16_t multiproto_2_pulseUs(uint16_t x);
+void decode_sbus(uint8_t* packet, uint16_t* channels);
 
-void build_packet(uint8_t* buffer, uint8_t pkt_type);
 
 #ifdef __cplusplus
 }

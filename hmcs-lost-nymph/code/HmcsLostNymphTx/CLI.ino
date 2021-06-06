@@ -1,3 +1,5 @@
+bool simulate_enabled = false;
+
 void cli_task()
 {
     //if (Serial.available() > 0)

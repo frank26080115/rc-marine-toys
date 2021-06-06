@@ -1,5 +1,8 @@
 #include <HmcsLostNymph.h>
 
+#define MISSED_PKTS_THRESH      3
+#define BIND_BUTTON_HOLD_TIME   1500
+
 #define LED_RED_OUT()  DDRB  |=  _BV(5)
 #define LED_RED_ON()   PORTB |=  _BV(5)
 #define LED_RED_OFF()  PORTB &= ~_BV(5)
@@ -13,11 +16,16 @@
 #define BIND_BTN_SETUP()   do { DDRB &= ~_BV(3); PORTB |= _BV(3); } while (0)
 #define BIND_BTN_PRESSED() ((PINB & _BV(3)) == 0)
 
+#define ADCPIN_BATT A0
+#define ADCPIN_AIN2 A1
+
 uint8_t radio_statemach = RADIOSM_IDLE;
 bool link_good = false;
+bool need_bind = false;
 bool debug_enabled = false;
 
 uint16_t telem_afcc;
+uint8_t rx_rssi;
 
 void setup()
 {
@@ -27,7 +35,7 @@ void setup()
     LED_GRN_OUT();
     LED_GRN_OFF();
     motors_init();
-    nvm_read();
+    nvm_load(0);
     RFM_IRQ_PIN_SETUP();
     radio_init();
     BIND_BTN_SETUP();
@@ -52,7 +60,9 @@ void radio_task()
     static uint32_t last_tx_time = 0;
     static uint32_t next_hop_delay = 0;
     static uint32_t missed_pkts = 0;
+    static uint8_t  hop_idx = 0;
     uint32_t now = millis();
+    uint8_t data_idx;
 
     switch (radio_statemach)
     {
@@ -85,7 +95,7 @@ void radio_task()
                     {
                         #ifdef HLN_SEND_COMPRESSED
                         uint8_t bytes2read = (((RC_USED_CHANNELS + 1) * 11) / 8);
-                        memcpy(sbus_buffer, (void*)(&(rfm_buffer[sizeof(pkthdr_t)])), bytes2read
+                        memcpy(sbus_buffer, (void*)(&(rfm_buffer[sizeof(pkthdr_t)])), bytes2read);
                         decode_sbus((uint8_t*)sbus_buffer, (uint16_t*)channel);
                         #else
                         memcpy(channel, (void*)(&(rfm_buffer[sizeof(pkthdr_t)])), RC_USED_CHANNELS * sizeof(uint16_t));
@@ -127,7 +137,7 @@ void radio_task()
 
                 if (debug_enabled)
                 {
-                    Seria.println();
+                    Serial.println();
                 }
             }
             else if (need_bind != false)
@@ -178,7 +188,7 @@ void radio_task()
             break;
         case RADIOSM_TX_START:
             build_packet(nvm.tx_uid, nvm.rx_uid, rfm_buffer, PKTTYPE_TELEMETRY);
-            uint8_t data_idx = sizeof(pkthdr_t);
+            data_idx = sizeof(pkthdr_t);
             telemetry_fill();
             data_idx += sizeof(telem_pkt_t);
             rfmSendPacket(rfm_buffer, data_idx);
@@ -210,7 +220,7 @@ void radio_task()
         case RADIOSM_BIND_TX:
             rfmSetChannel(RFM_BIND_CHANNEL);
             build_packet(nvm.tx_uid, nvm.rx_uid, rfm_buffer, PKTTYPE_BIND);
-            uint8_t data_idx = sizeof(pkthdr_t);
+            data_idx = sizeof(pkthdr_t);
             rfmSendPacket(rfm_buffer, data_idx);
             rfmClearIntStatus();
             rfmSetTX();
@@ -256,7 +266,7 @@ void bind_task()
     static uint32_t btn_time = 0;
     uint32_t now = millis();
 
-    if (BIND_BUTTON_PRESSED() != false)
+    if (BIND_BTN_PRESSED() != false)
     {
         if (prev_btn == false)
         {

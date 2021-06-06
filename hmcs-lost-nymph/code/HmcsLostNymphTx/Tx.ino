@@ -5,6 +5,7 @@ void radio_task()
     static uint32_t last_tx_time = 0;
 
     uint32_t now = millis();
+    uint8_t data_idx;
 
     switch (radio_statemach)
     {
@@ -50,14 +51,14 @@ void radio_task()
             last_tx_time = now;
             rfmSetChannel(get_hop_chan(hop_idx));
             build_packet(nvm.tx_uid, nvm.rx_uid, rfm_buffer, PKTTYPE_REMOTECONTROL);
-            uint8_t data_idx = sizeof(pkthdr_t);
+            data_idx = sizeof(pkthdr_t);
 
             #ifdef HLN_SEND_COMPRESSED
             uint32_t bytes2send = (((RC_USED_CHANNELS + 1) * 11) / 8);
             bytes2send = (bytes2send > SBUS_BYTECNT) ? SBUS_BYTECNT : bytes2send;
             for (uint8_t i = 0; i < bytes2send; i++)
             {
-                rfm_buffer[data_idx] = ((uint8_t*)sbus_buff)[i];
+                rfm_buffer[data_idx] = ((uint8_t*)sbus_buffer)[i];
                 data_idx++;
             }
             #else
@@ -82,7 +83,7 @@ void radio_task()
             hop_idx = 0;
             rfmSetChannel(RFM_BIND_CHANNEL);
             build_packet(bind_uid, 0, rfm_buffer, PKTTYPE_BIND);
-            uint8_t data_idx = sizeof(pkthdr_t);
+            data_idx = sizeof(pkthdr_t);
             rfmSendPacket(rfm_buffer, data_idx);
             rfmClearIntStatus();
             rfmSetTX();
@@ -204,7 +205,7 @@ bool taranis_task()
                 {
                     ret = true;
                     #ifdef HLN_SEND_COMPRESSED
-                    memcpy((uint8_t*)sbus_buff, (uint8_t*)&(mp_buffer[4]), SBUS_BYTECNT);
+                    memcpy((uint8_t*)sbus_buffer, (uint8_t*)&(mp_buffer[4]), SBUS_BYTECNT);
                     #endif
                     decode_sbus((uint8_t*)&(mp_buffer[4]), (uint16_t*)channel);
                     last_mp_time = now;
@@ -232,8 +233,6 @@ bool taranis_task()
     return ret;
 }
 
-uint32_t bind_start_time = 0;
-
 void bind_task()
 {
     static bool prev_need_bind = false;
@@ -241,7 +240,7 @@ void bind_task()
     static uint32_t btn_time = 0;
     uint32_t now = millis();
 
-    if (BIND_BUTTON_PRESSED() != false)
+    if (BIND_BTN_PRESSED() != false)
     {
         if (prev_btn == false)
         {
@@ -285,7 +284,7 @@ void bind_task()
     }
     else if (need_bind != false)
     {
-        if (radio_statemach == RADIOSM_BIND_FINISHED)
+        if (radio_statemach == RADIOSM_BIND_WAIT)
         {
             LED_RED_OFF();
             if (((now / 100) % 2) == 0)

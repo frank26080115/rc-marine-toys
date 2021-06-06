@@ -66,7 +66,7 @@ void test_io()
 {
     while(1)
     {
-        if (BIND_BUTTON_PRESSED())
+        if (BIND_BTN_PRESSED())
         {
             Serial.println("BIND");
             LED_GRN_ON();

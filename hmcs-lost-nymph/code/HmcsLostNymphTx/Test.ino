@@ -11,13 +11,13 @@ void test_rftx_cont()
         rfmSetTX();
 
         now = millis();
-        t = now;
+        uint32_t t = now;
         while (RFM_IRQ_ASSERTED() == false)
         {
             if (((now = millis()) - t) > 1000)
             {
                 Serial.print(".");
-                Serial.send_now();
+                //Serial.send_now();
             }
         }
         Serial.println(F("!"));
@@ -43,13 +43,13 @@ void test_rftx_sweep(uint32_t dly)
         Serial.print(now, DEC);
 
         now = millis();
-        t = now;
+        uint32_t t = now;
         while (RFM_IRQ_ASSERTED() == false)
         {
             if (((now = millis()) - t) > 1000)
             {
                 Serial.print(".");
-                Serial.send_now();
+                //Serial.send_now();
             }
         }
         Serial.println(F("!"));
@@ -67,7 +67,7 @@ void test_io()
 {
     while(1)
     {
-        if (BIND_BUTTON_PRESSED())
+        if (BIND_BTN_PRESSED())
         {
             Serial.println(F("BIND"));
             LED_GRN_ON();
@@ -81,6 +81,8 @@ void test_io()
         delay(100);
     }
 }
+
+extern multiprot_pkt_t* mp_pkt;
 
 void test_multiprotocol()
 {

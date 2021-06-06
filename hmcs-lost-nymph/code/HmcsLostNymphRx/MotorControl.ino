@@ -1,14 +1,14 @@
 #define MOTOR_PWM_FREQ      19999
 #define MOTOR_BRAKE_TIME_MS 500
-#define PIN_MOTOR_LEFT_A
-#define PIN_MOTOR_LEFT_B
-#define PIN_MOTOR_LEFT_PWM
-#define PIN_MOTOR_RIGHT_A
-#define PIN_MOTOR_RIGHT_B
-#define PIN_MOTOR_RIGHT_PWM
-#define PIN_PUMP_A
-#define PIN_PUMP_B
-#define PIN_PUMP_PWM
+#define PIN_MOTOR_LEFT_A    1
+#define PIN_MOTOR_LEFT_B    2
+#define PIN_MOTOR_LEFT_PWM  3
+#define PIN_MOTOR_RIGHT_A   4
+#define PIN_MOTOR_RIGHT_B   5
+#define PIN_MOTOR_RIGHT_PWM 6
+#define PIN_PUMP_A          7
+#define PIN_PUMP_B          8
+#define PIN_PUMP_PWM        9
 
 void motors_init()
 {
@@ -96,7 +96,7 @@ void motor_buzz(int pin_a, int pin_b, int pin_pwm, uint32_t freq, uint32_t durat
     uint32_t dly = 500000 / freq;
     uint32_t now = millis();
     analogWrite(pin_pwm, 255);
-    while ((millis - now) < duration)
+    while ((millis() - now) < duration)
     {
         digitalWrite(pin_a, LOW);
         digitalWrite(pin_b, HIGH);

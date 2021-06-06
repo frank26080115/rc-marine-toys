@@ -27,6 +27,7 @@ void smartport_send(uint8_t* data)
     Serial.write('P');
     Serial.write(0x02); // type = S.PORT telemetry
     Serial.write(9);    // length, excluding the header
+    #endif
     #if TELEMETRY_MODE == TELEMODE_SPORT
     Serial.write(0x7E);
     #endif
@@ -107,7 +108,7 @@ void telemetry_task()
     }
     if ((now - telem_sendTime) < TELEM_INTERVAL_MS)
     {
-        return
+        return;
     }
     telem_sendTime = now;
     telem_good = true;
@@ -142,7 +143,7 @@ void telemetry_task()
             return;
     }
     smartport_send(buf);
-    telem_lastTime = millis();
+    //telem_lastTime = millis();
 #elif TELEMETRY_MODE == TELEMODE_FRSKYD
     uint8_t frame[9];
     if (telem_schedule == 0)

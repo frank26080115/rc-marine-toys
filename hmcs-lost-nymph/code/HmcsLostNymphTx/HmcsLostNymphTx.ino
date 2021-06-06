@@ -1,5 +1,7 @@
 #include <HmcsLostNymph.h>
 
+#define BIND_BUTTON_HOLD_TIME     2000
+
 #define LED_RED_OUT()  DDRB  |=  _BV(5)
 #define LED_RED_ON()   PORTB |=  _BV(5)
 #define LED_RED_OFF()  PORTB &= ~_BV(5)
@@ -21,9 +23,12 @@ uint8_t hop_idx = 0;
 bool need_bind = false;
 uint32_t bind_uid = 0;
 uint8_t mp_rxnum = 0;
+uint8_t tx_rssi;
 
 bool mp_ready = false;
 bool telem_good = false;
+
+uint32_t bind_start_time = 0;
 
 void setup()
 {
@@ -32,7 +37,7 @@ void setup()
     LED_RED_OFF();
     LED_GRN_OUT();
     LED_GRN_OFF();
-    nvm_read();
+    nvm_load(0);
 
     RFM_IRQ_PIN_SETUP();
     radio_init();
