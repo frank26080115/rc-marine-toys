@@ -1,7 +1,7 @@
 Mechanical Design Journal
 =========================
 
-The decision to make the submarine resemble a Los Angeles class SSN is because this class has a simplistic look. Making a realistic scale model is not priority.
+This submarine resembles a cross between the Los Angeles class and Akula class SSNs. Making a realistic scale model is not priority.
 
 The decision to use twin propellers without rudders is for simplicity. Plus, rudders only work while in forward motion.
 
@@ -27,8 +27,6 @@ Assume the whole submarine is a 600mm long and 80mm diameter cylinder. The volum
 
 Water is an incompressible fluid, its density does not change by any appreciable amount for small depths like a swimming pool. I cannot determine the maximum dive depth of the submarine. What will happen is that the buoyancy force will always be acting on it, it will almost always be rising or sinking by very small amounts, sometimes so small that it appears to be neutrally buoyant. Originally I wanted to design a limit to the ballast bladder so it can't sink below a particular depth, but this is practically impossible. Instead, I will only be able to limit its rate of decent.
 
-With a pump capable of moving roughly 1mL/s of water, it seems like if I wanted to dive or rise 1 meter vertically, it would take under 8 seconds of pumping. At neutral buoyancy, 1 second of additional pumping only results in a 0.08m/s change in velocity after 1 meter, and take roughly 24 seconds to rise or dive another 1 meter. Pumping for 5 seconds will get you enough vertical velocity to move 1 meter in just 10 seconds. A full minute of pumping is only 60 additional mL of water and it makes the vertical velocity fast enough to move 1 meter in 3 seconds.
-
-This feels like enough control for human control without computerized assistance. Sensing depth is incredibly difficult at such small scale. The RSSI and LQI of the radios might be an easier way of estimating depth.
+With a pump capable of moving roughly 1mL/s of water, it seems like if I wanted to dive or rise 1 meter vertically, it would take about 12 seconds of pumping (assuming static initial conditions). This feels like enough control for human control without computerized assistance. Realistically, I would be running the pump for maybe 8 seconds in one direction, and then another 8 seconds in the opposite direction, to avoid overshooting. Sensing depth is incredibly difficult at such small scale (venturi effect would dominate the minute pressure changes of depth). The RSSI of the radios might be an easier way of estimating depth.
 
 The bladder will never need to occupy that much volume, and the projected forces on the front and rear end-caps is incredibly overestimated.
