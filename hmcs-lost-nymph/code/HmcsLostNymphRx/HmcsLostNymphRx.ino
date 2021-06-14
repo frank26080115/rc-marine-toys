@@ -37,7 +37,6 @@ void setup()
     LED_RED_OFF();
     LED_GRN_OUT();
     LED_GRN_OFF();
-    mpu_init();
     mpu_test();
 
     //motors_init();
