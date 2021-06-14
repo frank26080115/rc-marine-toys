@@ -3,12 +3,13 @@
 
 void mpu_init()
 {
-    mpu_busFreeCheck();
+    //mpu_busFreeCheck();
     Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
-    Wire.setDefaultTimeout(250000); // 250ms default timeout
-    mpu_writeReg(MPU6050_RA_PWR_MGMT_1, 0x80);
+    Wire.resetBus();
+    Wire.setDefaultTimeout(5000); // 250ms default timeout
+    mpu_writeReg(MPU6050_RA_PWR_MGMT_1, (1 << MPU6050_PWR1_DEVICE_RESET_BIT));
     delay(1);
-    mpu_writeReg(MPU6050_RA_PWR_MGMT_1, 0x00);
+    mpu_writeReg(MPU6050_RA_PWR_MGMT_1, MPU6050_CLOCK_PLL_ZGYRO);
     mpu_writeBits(MPU6050_RA_GYRO_CONFIG , MPU6050_GCONFIG_FS_SEL_BIT , MPU6050_GCONFIG_FS_SEL_LENGTH , MPU6050_GYRO_FS_250);
     mpu_writeBits(MPU6050_RA_ACCEL_CONFIG, MPU6050_ACONFIG_AFS_SEL_BIT, MPU6050_ACONFIG_AFS_SEL_LENGTH, MPU6050_ACCEL_FS_2);
     mpu_writeReg(MPU6050_RA_CONFIG, 0);
@@ -22,11 +23,14 @@ enum
     MPUSM_WRITE_WAIT,
     MPUSM_READ,
     MPUSM_READ_WAIT,
+    MPUSM_WAIT,
 };
 
 uint8_t  mpu_statemachine = MPUSM_IDLE;
 int16_t  mpu_dataRaw[7];
 bool     mpu_new = false;
+uint32_t mpu_timestamp = 0;
+uint32_t mpu_timeoutstamp = 0;
 
 void mpu_task()
 {
@@ -35,24 +39,43 @@ void mpu_task()
         case MPUSM_IDLE:
             mpu_statemachine = MPUSM_WRITE;
         case MPUSM_WRITE:
+            mpu_timestamp = millis();
             Wire.setOpMode(I2C_OP_MODE_ISR);
             Wire.beginTransmission(MPU6050_DEFAULT_ADDRESS);
             Wire.write(MPU6050_RA_ACCEL_XOUT_H);
             Wire.sendTransmission(I2C_NOSTOP);
             mpu_statemachine = MPUSM_WRITE_WAIT;
+            mpu_timeoutstamp = mpu_timestamp;
             break;
         case MPUSM_WRITE_WAIT:
-            if (Wire.done())
+            if (Wire.getError() != 0)
+            {
+                mpu_statemachine = MPUSM_WRITE;
+            }
+            else if (Wire.done())
             {
                 mpu_statemachine = MPUSM_READ;
+            }
+            else
+            {
+                if ((millis() - mpu_timeoutstamp) > 5)
+                {
+                    Wire.resetBus();
+                    mpu_statemachine = MPUSM_WRITE;
+                }
             }
             break;
         case MPUSM_READ:
             Wire.sendRequest(MPU6050_DEFAULT_ADDRESS, 14, I2C_STOP);
             mpu_statemachine = MPUSM_READ_WAIT;
+            mpu_timeoutstamp = millis();
             break;
         case MPUSM_READ_WAIT:
-            if (Wire.available() >= 14 || Wire.done())
+            if (Wire.getError() != 0)
+            {
+                mpu_statemachine = MPUSM_WRITE;
+            }
+            else if (Wire.available() >= 14 || Wire.done())
             {
                 uint8_t i;
                 for (i = 0; i < 7; i++)
@@ -66,6 +89,20 @@ void mpu_task()
                     mpu_dataRaw[i] = *xp;
                 }
                 mpu_new = true;
+                mpu_statemachine = MPUSM_WAIT;
+            }
+            else
+            {
+                if ((millis() - mpu_timeoutstamp) > 5)
+                {
+                    Wire.resetBus();
+                    mpu_statemachine = MPUSM_WRITE;
+                }
+            }
+            break;
+        case MPUSM_WAIT:
+            if ((millis() - mpu_timestamp) >= 5) // 200 samples per second
+            {
                 mpu_statemachine = MPUSM_WRITE;
             }
             break;
@@ -74,6 +111,7 @@ void mpu_task()
 
 void mpu_test()
 {
+    uint32_t samples = 0;
     uint32_t ts = 0;
     uint32_t now;
     while (1)
@@ -82,11 +120,18 @@ void mpu_test()
         if (mpu_new != false)
         {
             mpu_new = false;
+            samples++;
             now = millis();
             if ((now - ts) > 100)
             {
                 ts = now;
-                Serial.println(mpu_dataRaw[0], DEC);
+                uint8_t di;
+                Serial.printf("%7d: ", samples);
+                for (di = 0; di < 7; di++)
+                {
+                    Serial.printf("%7d ", mpu_dataRaw[di]);
+                }
+                Serial.println();
             }
         }
     }
@@ -149,6 +194,7 @@ void mpu_writeBit(uint8_t regAdr, uint8_t bitpos, bool set)
 
 void mpu_busFreeCheck()
 {
+    #if 0
     pinMode(PIN_SDA, INPUT);
     pinMode(PIN_SCL, INPUT);
     if (digitalRead(PIN_SCL) == LOW || digitalRead(PIN_SDA) == LOW)
@@ -168,4 +214,7 @@ void mpu_busFreeCheck()
         digitalWrite(PIN_SCL, HIGH);
         delayMicroseconds(100);
     }
+    #else
+    Wire.resetBus();
+    #endif
 }

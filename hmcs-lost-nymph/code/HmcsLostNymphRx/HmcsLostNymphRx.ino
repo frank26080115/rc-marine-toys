@@ -38,20 +38,7 @@ void setup()
     LED_GRN_OUT();
     LED_GRN_OFF();
     mpu_init();
-    
-    while (1)
-    {
-        AADC_task();
-        uint8_t ai;
-        for (ai = 0; ai < 3; ai++)
-        {
-            if (AADC_hasNew(ai))
-            {
-                AADC_clearNew(ai);
-                Serial.printf("[%u]: %u\r\n", ai, AADC_read16(ai));
-            }
-        }
-    }
+    mpu_test();
 
     //motors_init();
     //nvm_load(0);
