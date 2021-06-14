@@ -3,15 +3,19 @@
 #define TELEMODE_FRSKYD 2
 #define TELEMETRY_MODE  TELEMODE_SPORT
 
-uint8_t telem_schedule = 0;
+uint8_t telem_schedule  = 0;
 uint32_t telem_sendTime = 0;
-uint32_t telem_rxTime = 0;
+uint32_t telem_rxTime   = 0;
 
-uint8_t telem_a1 = 0;
-uint8_t telem_a2 = 0;
-uint8_t telem_rssi_rx = 0;
-uint8_t telem_rssi_tx = 0;
-uint8_t telem_profile = 0;
+uint8_t telem_a1        = 0;
+uint8_t telem_a2        = 0;
+uint8_t telem_rssi_rx   = 0;
+uint8_t telem_rssi_tx   = 0;
+#ifdef USE_LQI
+uint8_t telem_lqi_rx    = 0;
+uint8_t telem_lqi_tx    = 0;
+#endif
+uint8_t telem_profile   = 0;
 
 #if TELEMETRY_MODE == TELEMODE_MULPRO || TELEMETRY_MODE == TELEMODE_SPORT
 
@@ -86,13 +90,21 @@ void frskyd_sendStuffed(uint8_t* data)
 
 #endif
 
-void report_telemetry(uint8_t a1, uint8_t a2, uint8_t rssi_rx, uint8_t rssi_tx, uint8_t profile)
+void report_telemetry(uint8_t a1, uint8_t a2, uint8_t rssi_rx, uint8_t rssi_tx
+    #ifdef USE_LQI
+        , uint8_t rssi_rx, uint8_t rssi_tx
+    #endif
+        , uint8_tuint8_t profile)
 {
     telem_rxTime = millis();
     telem_a1 = a1;
     telem_a2 = a2;
     telem_rssi_rx = rssi_rx;
     telem_rssi_tx = rssi_tx;
+    #ifdef USE_LQI
+    telem_lqi_rx = lqi_rx;
+    telem_lqi_tx = lqi_tx;
+    #endif
     telem_profile = profile;
     telemetry_task();
 }
@@ -127,6 +139,11 @@ void telemetry_task()
             buf[2] = 0x01;
             buf[3] = 0xF1;
             buf[4] = (uint16_t)(telem_rssi_rx) * 100 / 256;
+            buf[5] = (uint16_t)(telem_rssi_tx) * 100 / 256;
+            #ifdef USE_LQI
+            buf[6] = telem_lqi_rx;
+            buf[7] = telem_lqi_tx;
+            #endif
             break;
         case 2: //BATT
             buf[2] = 0x04;

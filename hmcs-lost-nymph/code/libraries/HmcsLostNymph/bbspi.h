@@ -33,30 +33,26 @@ extern "C" {
 
 #define _NOP() __nop()
 
-#define  PIN_nSEL                    5
+#define  PIN_nSEL                    8
 #define  nSEL_OUT() pinMode         (PIN_nSEL, OUTPUT)
 #define  nSEL_HI()  digitalWriteFast(PIN_nSEL, HIGH)
 #define  nSEL_LO()  digitalWriteFast(PIN_nSEL, LOW)
 
-#ifdef FORCE_SPI_BITBANG
-
-#define  PIN_SCK                     6
+#define  PIN_SCK                     14
 #define  SCK_OUT()  pinMode         (PIN_SCK, OUTPUT)
 #define  SCK_HI()   digitalWriteFast(PIN_SCK, HIGH)
 #define  SCK_LO()   digitalWriteFast(PIN_SCK, LOW)
 
-#define  PIN_MOSI                    7
+#define  PIN_MOSI                    11
 #define  SDI_OUT()  pinMode         (PIN_MOSI, OUTPUT)
 #define  SDI_HI()   digitalWriteFast(PIN_MOSI, HIGH)
 #define  SDI_LO()   digitalWriteFast(PIN_MOSI, LOW)
 
-#define  PIN_MISO   8
-#define  SDO_IN()   pinMode(PIN_MISO, INPUT)
+#define  PIN_MISO                    12
+#define  SDO_IN()   pinMode         (PIN_MISO, INPUT)
 #define  SDO_LO()   _NOP()
 #define  SDO_1()    (digitalReadFast(PIN_MISO) != LOW)
 #define  SDO_0()    (digitalReadFast(PIN_MISO) == LOW)
-
-#endif
 
 #endif
 

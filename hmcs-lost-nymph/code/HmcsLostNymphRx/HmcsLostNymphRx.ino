@@ -1,20 +1,23 @@
 #include <HmcsLostNymph.h>
 
+#include "bbspi.h"
+
+#include "aadc.h"
+
 #define MISSED_PKTS_THRESH      3
 #define BIND_BUTTON_HOLD_TIME   1500
 
-#define LED_RED_OUT()  DDRB  |=  _BV(5)
-#define LED_RED_ON()   PORTB |=  _BV(5)
-#define LED_RED_OFF()  PORTB &= ~_BV(5)
-#define LED_GRN_OUT()  DDRB  |=  _BV(4)
-#define LED_GRN_ON()   PORTB |=  _BV(4)
-#define LED_GRN_OFF()  PORTB &= ~_BV(4)
+#define LED_RED_OUT()  pinMode(13, OUTPUT)
+#define LED_RED_ON()   digitalWriteFast(13, HIGH)
+#define LED_RED_OFF()  digitalWriteFast(13, LOW)
+#define LED_GRN_OUT()  do { } while (0)
+#define LED_GRN_ON()   do { } while (0)
+#define LED_GRN_OFF()  do { } while (0)
 
-#define RFM_IRQ_PIN_SETUP() do { DDRD &= ~_BV(2); DDRD |= _BV(2); } while (0)
-#define RFM_IRQ_ASSERTED()  ((PIND & _BV(2))==0x00)
+#define RFM_IRQ_PIN_SETUP() pinMode(7, INPUT_PULLUP)
+#define RFM_IRQ_ASSERTED()  (digitalReadFast(7) == LOW)
 
-#define BIND_BTN_SETUP()   do { DDRB &= ~_BV(3); PORTB |= _BV(3); } while (0)
-#define BIND_BTN_PRESSED() ((PINB & _BV(3)) == 0)
+#define BIND_BTN_PRESSED() (0)
 
 #define ADCPIN_BATT A0
 #define ADCPIN_AIN2 A1
@@ -34,11 +37,36 @@ void setup()
     LED_RED_OFF();
     LED_GRN_OUT();
     LED_GRN_OFF();
-    motors_init();
-    nvm_load(0);
+    mpu_init();
+    
+    while (1)
+    {
+        AADC_task();
+        uint8_t ai;
+        for (ai = 0; ai < 3; ai++)
+        {
+            if (AADC_hasNew(ai))
+            {
+                AADC_clearNew(ai);
+                Serial.printf("[%u]: %u\r\n", ai, AADC_read16(ai));
+            }
+        }
+    }
+
+    //motors_init();
+    //nvm_load(0);
     RFM_IRQ_PIN_SETUP();
+
+    while (Serial.available() <= 0)
+    {
+    }
     radio_init();
-    BIND_BTN_SETUP();
+    Serial.println("Hello");
+    int i;
+    for (i = 0; i <= 0x7E; i++)
+    {
+        Serial.printf("0x%02X = 0x%02X\r\n", i, spiReadRegister(i));
+    }
 
     while (millis() == 0) {
         // do nothing
@@ -160,7 +188,6 @@ void radio_task()
                             missed_pkts = MISSED_PKTS_THRESH;
                             link_good = false;
                             failsafe();
-                            radio_statemach = RADIOSM_RX_START; // no more hopping, no point
                         }
                     }
                     next_hop_delay = CHANHOP_MISSED_MS;
@@ -203,13 +230,25 @@ void radio_task()
                 if ((now - last_tx_time) >= PKT_INTVAL_MS)
                 {
                     // timeout waiting for TX
-                    radio_statemach = need_bind == false ? RADIOSM_RX_START : RADIOSM_BIND_START;
+                    radio_statemach = need_bind == false ?
+                        #ifdef AS_FAST_AS_POSSIBLE
+                            RADIOSM_RX_HOP
+                        #else
+                            RADIOSM_RX_START
+                        #endif
+                        : RADIOSM_BIND_START;
                 }
             }
             else
             {
                 // yes interrupt pin assertion
-                radio_statemach = need_bind == false ? RADIOSM_RX_START : RADIOSM_BIND_START;
+                radio_statemach = need_bind == false ?
+                    #ifdef AS_FAST_AS_POSSIBLE
+                        RADIOSM_RX_HOP
+                    #else
+                        RADIOSM_RX_START
+                    #endif
+                    : RADIOSM_BIND_START;
             }
             break;
         case RADIOSM_BIND_START:

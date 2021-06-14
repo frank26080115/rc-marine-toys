@@ -86,6 +86,8 @@
 #define RFM22B_PACKET_SENT_INTERRUPT          0x04
 #define RFM22B_RX_PACKET_RECEIVED_INTERRUPT   0x02
 
+#define RFM22B_TX_TIMEOUT          5
+
 typedef struct rfm22_modem_regs {
   uint32_t bps;
   uint8_t  r_1C, r_1D, r_1E, r_20, r_21, r_22, r_23, r_24, r_25, r_2A, r_6E, r_6F, r_70, r_71, r_72;

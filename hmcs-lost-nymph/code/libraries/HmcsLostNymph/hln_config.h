@@ -6,10 +6,10 @@
 #define MAGIC_KEY   0xDEADBEAF
 #define PRIVATE_KEY 0x2EF85CA8
 
-#define HLN_SEND_COMPRESSED
+//#define HLN_SEND_COMPRESSED
 
-//#define RFM_NOMINAL_FREQ     435000000
-#define RFM_NOMINAL_FREQ     240000000
+#define RFM_NOMINAL_FREQ     435000000
+//#define RFM_NOMINAL_FREQ     240000000
 #define RFM_FREQHOP_STEPSIZE 3
 #define RFM_FREQHOP_CHANCNT  8
 #define RFM_BIND_CHANNEL     1
@@ -19,6 +19,8 @@
 
 #define CHANHOP_NEXT_MS       (PKT_INTVAL_MS - (PKT_INTVAL_MS / 5))  // when to hop on successful reception, must be very slightly shorter than the normal interval
 #define CHANHOP_MISSED_MS     (PKT_INTVAL_MS * 2)   // when to hop when a packet is missed, must be much longer than the normal interval
+
+#define AS_FAST_AS_POSSIBLE
 
 #define TELEM_LOST_MS        1000
 #define TARANIS_TIMEOUT      1000

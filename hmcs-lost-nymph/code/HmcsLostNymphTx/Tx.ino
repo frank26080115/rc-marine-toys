@@ -39,6 +39,9 @@ void radio_task()
                         {
                             telem_pkt_t* tp = (telem_pkt_t*)&(rfm_buffer[sizeof(pkthdr_t)]);
                             report_telemetry(tp->a1, tp->a2, tp->rssi, tx_rssi, 0);
+                            #ifdef AS_FAST_AS_POSSIBLE
+                            radio_statemach = need_bind == false ? RADIOSM_TX_START : RADIOSM_BIND_START;
+                            #endif
                         }
                     }
                 }
@@ -93,7 +96,7 @@ void radio_task()
             if (RFM_IRQ_ASSERTED() == false)
             {
                 // no interrupt pin assertion
-                if ((now - last_tx_time) >= PKT_INTVAL_MS)
+                if ((now - last_tx_time) >= RFM22B_TX_TIMEOUT)
                 {
                     // timeout waiting for TX
                     radio_statemach = RADIOSM_TX_START;

@@ -9,15 +9,20 @@ uint8_t  rfm_buffer[RFM_PKT_LEN];
 uint8_t  sbus_buffer[RFM_PKT_LEN];
 #endif
 nvm_t nvm;
+uint32_t link_quality;
 
 uint8_t get_hop_chan(uint8_t idx)
 {
+    #ifndef DISABLE_HOP
     uid_t xored_id[2];
     uint8_t* p;
     xored_id[0] = nvm.tx_uid;
     xored_id[1] = nvm.rx_uid;
     p = (uint8_t*)(xored_id);
     return p[idx % (sizeof(uid_t) * 2)];
+    #else
+    return RFM_BIND_CHANNEL;
+    #endif
 }
 
 uid_t calc_hdrchk(uid_t tx_uid, uid_t rx_uid)
@@ -162,3 +167,41 @@ void decode_sbus(uint8_t* packet, uint16_t* channels)
         channel[(set << 3) + 7] = multiproto_2_pulseUs(ptr->sbus.ch[set].ch7);
     }
 }
+
+#ifdef USE_LQI
+void linkquality_inc()
+{
+    if (link_quality <= 0)
+    {
+        link_quality = 1;
+    }
+    else
+    {
+        link_quality <<= 1;
+        link_quality |= 1;
+    }
+}
+
+void linkquality_dec()
+{
+    link_quality >>= 1;
+}
+
+void linkquality_zero()
+{
+    link_quality = 0;
+}
+
+uint8_t linkquality_get()
+{
+    int i;
+    for (i = 32; i >= 0; i--)
+    {
+        uint32_t j = (1 << i);
+        if ((link_quality & j) != 0)
+        {
+            return i * 4;
+        }
+    }
+}
+#endif

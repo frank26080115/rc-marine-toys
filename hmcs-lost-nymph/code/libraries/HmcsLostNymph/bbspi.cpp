@@ -84,8 +84,14 @@ void spi_hwInit()
 {
     nSEL_OUT();
     nSEL_HI();
+    SCK_OUT();
+    SDI_OUT();
     SPI.begin();
-    SPI.beginTransaction(SPISettings(8000000, MSBFIRST, SPI_MODE0));
+    
+    SPI.setSCK(PIN_SCK);
+    SPI.setMOSI(PIN_MOSI);
+    SPI.setMISO(PIN_MISO);
+    SPI.beginTransaction(SPISettings(400000, MSBFIRST, SPI_MODE0));
 }
 
 void spiWriteData(uint8_t i)
@@ -121,7 +127,7 @@ uint8_t spiReadRegister(uint8_t address)
 
 void spiSendAddress(uint8_t i)
 {
-  spiSendCommand(i & 0x7f);
+  spiSendCommand(i & 0x7F);
 }
 
 void spiWriteRegister(uint8_t address, uint8_t data)
